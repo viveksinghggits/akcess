@@ -1,6 +1,3 @@
-[ToC]
-
-
 ## Akcess
 
 `akcess` is a command-line utility that can be used to share very fine-grained access to your Kubernetes
