@@ -25,6 +25,10 @@ Flags:
 Use "akcess [command] --help" for more information about a command.
 ```
 
+## Demo
+
+<center><img src="docs/video/akcess-demo-final.gif"/></center>
+
 
 ## Use cases
 
