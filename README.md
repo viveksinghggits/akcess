@@ -51,9 +51,40 @@ should be allowed for using the below command
 
 ## Installing `akcess`
 
+`akcess` is not available currently using OS package managers. You will have to install it by downloading the release
+from GitHub.
+
+Go to [releases page](https://github.com/viveksinghggits/akcess/releases) and find download the appropriate binary
+for your operating system and architecture, using either `curl` or `wget` commands. And eventual move it to your
+`PATH`.
+
 ### Linux
 
-### Windows
+You can figure out the operating system details using the command
+
+```
+» uname -a
+Linux vivek 5.13.0-30-generic #33~20.04.1-Ubuntu SMP Mon Feb 7 14:25:10 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
+```
+
+- Download, respective binary (artifacts) from releases, you can specify the expected value for the version var
+
+```
+export VERSION=0.0.1
+wget https://github.com/viveksinghggits/akcess/releases/download/v${VERSION}/akcess_${VERSION}_Linux_x86_64.tar.gz
+```
+
+- Extract the downloaded `.tar.gz` file
+
+```
+tar xf akcess_0.0.1_Linux_x86_64.tar.gz
+```
+
+- Move the binary to `PATH`
+
+```
+mv akcess /usr/local/bin
+```
 
 ## Examples
 
