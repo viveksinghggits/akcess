@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -93,7 +94,7 @@ func CSRObject(csr []byte, duration int32, id uuid.UUID) *v1.CertificateSigningR
 	durationSeconds := duration * 60
 	csrObject := &v1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", utils.Name),
+			Name: fmt.Sprintf("%s-%s", utils.Name, rand.String(5)),
 			Annotations: map[string]string{
 				utils.ResourceAnnotationKey: id.String(),
 			},

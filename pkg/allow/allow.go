@@ -19,10 +19,16 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apirand "k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apimachinery/pkg/util/wait"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/viveksinghggits/akcess/pkg/kube"
 	"github.com/viveksinghggits/akcess/pkg/utils"
+)
+
+var (
+	certificateWaitTimeout       = 30 * time.Second
+	certificateWaitPollInternval = 1 * time.Second
 )
 
 func Access(o *utils.AllowOptions, id uuid.UUID) error {
@@ -76,6 +82,20 @@ func Access(o *utils.AllowOptions, id uuid.UUID) error {
 	_, err = k.KubeClient.CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, c.Name, csrObject, metav1.UpdateOptions{})
 	if err != nil {
 		return errors.Wrap(err, "Approving CertificateSigningRequest")
+	}
+
+	// wait for certificate field to be generated in CSR's status.certificate field
+	err = wait.Poll(certificateWaitPollInternval, certificateWaitTimeout, func() (done bool, err error) {
+		csr, err := k.KubeClient.CertificatesV1().CertificateSigningRequests().Get(ctx, c.Name, metav1.GetOptions{})
+		if string(csr.Status.Certificate) != "" {
+			return true, nil
+		}
+
+		return false, nil
+	})
+
+	if err != nil {
+		return errors.Wrap(err, "waiting for CSR certificate to be generated")
 	}
 
 	// create role and rolebinding
