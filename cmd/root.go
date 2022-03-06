@@ -55,6 +55,8 @@ var (
 	options       = &utils.AllowOptions{}
 	res           = []string{}
 	delIdentifier string
+	// VERSION will be overriden by ldflags when we build the project using goreleaser
+	VERSION = "DEV"
 )
 
 func init() {
@@ -79,7 +81,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: fmt.Sprintf("Print the version of %s", utils.Name),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("akcess 0.0.1")
+		fmt.Println(VERSION)
 	},
 }
 
