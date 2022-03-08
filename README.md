@@ -14,7 +14,7 @@ Usage:
 Available Commands:
   allow       Allow the access to the resources
   completion  Generate the autocompletion script for the specified shell
-  delete      Delete the kubernetes resources that were made speicifc allow command
+  delete      Delete the kubernetes resources that were made specific allow command
   help        Help about any command
   list        List the number of times we ran the allow command
   version     Print the version of akcess
@@ -58,13 +58,13 @@ should be allowed for using the below command
 `akcess` is not available currently using OS package managers. You will have to install it by downloading the release
 from GitHub.
 
-Go to [releases page](https://github.com/viveksinghggits/akcess/releases) and find download the appropriate binary
-for your operating system and architecture, using either `curl` or `wget` commands. And eventual move it to your
+Go to [releases page](https://github.com/viveksinghggits/akcess/releases) and download the appropriate binary
+for your operating system and architecture, using either `curl` or `wget` commands. And move it to your
 `PATH`.
 
 ### Linux
 
-You can figure out the operating system details using the command
+You can figure out the operating system details using the below command
 
 ```
 » uname -a
@@ -100,10 +100,12 @@ mv akcess /usr/local/bin
 - Allow access to see logs of pod with name `nginx` in `test` namespace
 
 ```
-» akcess allow --verb get,list --resource pods,pods/log -n test
+# log is sub resource for pod resource
+» akcess allow --verb get,list --resource pods,pods/log -n test --resource-name nginx
 ```
 
-You can also directy redirect the output of above commands to a file, that can be set at `KUBECONFIG` env var.
+You can also redirect the output of the above commands to a file, that can be set at `KUBECONFIG` env var.
+
 ```
 » akcess allow --verb get,list --resource pods,pods/log -n test > logsconfig
 » export KUBECONFIG=logsconfig
@@ -115,7 +117,7 @@ You can also directy redirect the output of above commands to a file, that can b
 specified in the `akcess allow` command.
 
 Whenever we create a Kubernetes resource, we annotate it with a key `allow.akcess.id` and value to be a `UUID`.
-The set of resources that have been created or the number of time `akcess allow` has been run can be figured
+The set of resources that have been created or the number of times `akcess allow` has been run can be figured
 out by running
 
 ```
