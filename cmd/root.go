@@ -41,6 +41,10 @@ var rootCmd = &cobra.Command{
 	Short: "Create kubeconfig file with specified fine-grained authorization",
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) == 0 {
+			cmd.Help()
+			os.Exit(0)
+		}
 	},
 }
 
