@@ -78,7 +78,7 @@ func (f *FileStore) List() ([]akcessConfig, error) {
 	}
 	var confList []akcessConfig
 	if err := yaml.Unmarshal(data, &confList); err != nil {
-		return nil, errors.Wrap(err, "Unmarhsalling data while listing")
+		return nil, errors.Wrap(err, "Unmarshalling data while listing")
 	}
 
 	return confList, nil
