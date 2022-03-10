@@ -55,7 +55,7 @@ var (
 	options       = &utils.AllowOptions{}
 	res           = []string{}
 	delIdentifier string
-	// VERSION will be overriden by ldflags when we build the project using goreleaser
+	// VERSION will be overridden by ldflags when we build the project using goreleaser
 	VERSION = "DEV"
 )
 
@@ -123,8 +123,8 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List the number of times we ran the allow command",
 	Long: `list can be used to figure out how many times the allow command was run.
-	Becuase for every run we are going to create respective CSR, Role and Rolebinding  objects,
-	this command can then be used to delete the respective CSR, RB and Role resoruces for specific request`,
+	Because for every run we are going to create respective CSR, Role and Rolebinding  objects,
+	this command can then be used to delete the respective CSR, RB and Role resources for specific request`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		s, err := store.NewFileStore()
 		if err != nil {
