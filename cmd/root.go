@@ -67,7 +67,7 @@ func init() {
 	allowCmd.Flags().StringVarP(&options.KubeConfigPath, "kubeconfig", "k", "", "Path to kubeconfig file")
 	allowCmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "default", "Namespace of the resource")
 	allowCmd.Flags().StringSliceVarP(&options.ResourceNames, "resource-name", "", []string{}, "Resource names to allow access on")
-	allowCmd.Flags().Int32VarP(&options.ValidFor, "for", "f", 86400, "Duration the access will be allowed for (in minutes), for example --for 10. Defaults to 1 day")
+	allowCmd.Flags().Int32VarP(&options.ValidFor, "for", "f", 1440, "Duration the access will be allowed for (in minutes), for example --for 10. Defaults to 1 day")
 	// required flags fro allow command
 	allowCmd.MarkFlagRequired("resource")
 	allowCmd.MarkFlagRequired("verb")
@@ -212,7 +212,7 @@ func validateArguments(o *utils.AllowOptions) error {
 	}
 
 	if o.ValidFor*60 < 600 {
-		return errors.New("Duration (--from) can not be less than 10 minutes")
+		return errors.New("Duration (--for) can not be less than 10 minutes")
 	}
 
 	return nil
