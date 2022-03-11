@@ -72,7 +72,7 @@ func Access(o *utils.AllowOptions, id uuid.UUID) error {
 	csrObject.Status.Conditions = append(csrObject.Status.Conditions, certv1.CertificateSigningRequestCondition{
 		Type:           certv1.CertificateApproved,
 		Status:         v1.ConditionTrue,
-		Reason:         "Certificate wa approved by akcess",
+		Reason:         "Certificate was approved by akcess",
 		Message:        "Certificate was approved",
 		LastUpdateTime: metav1.Time{Time: time.Now()},
 	})
@@ -129,7 +129,7 @@ func Access(o *utils.AllowOptions, id uuid.UUID) error {
 func privateKey() (*rsa.PrivateKey, error) {
 	k, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, errors.Wrap(err, "Generating priavte key")
+		return nil, errors.Wrap(err, "Generating private key")
 	}
 
 	return k, nil

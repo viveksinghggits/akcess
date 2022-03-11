@@ -72,12 +72,12 @@ func init() {
 	allowCmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "default", "Namespace of the resource")
 	allowCmd.Flags().StringSliceVarP(&options.ResourceNames, "resource-name", "", []string{}, "Resource names to allow access on")
 	allowCmd.Flags().Int32VarP(&options.ValidFor, "for", "f", 86400, "Duration the access will be allowed for (in minutes), for example --for 10. Defaults to 1 day")
-	// required flags fro allow command
+	// required flags for allow command
 	allowCmd.MarkFlagRequired("resource")
 	allowCmd.MarkFlagRequired("verb")
 
 	deleteCmd.Flags().StringVarP(&delIdentifier, "id", "i", "", "Id for which the k8s resources should be deleted. Can be figured out from list command")
-	// required flags fro delete command
+	// required flags for delete command
 	deleteCmd.MarkFlagRequired("id")
 }
 
@@ -127,8 +127,8 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List the number of times we ran the allow command",
 	Long: `list can be used to figure out how many times the allow command was run.
-	Because for every run we are going to create respective CSR, Role and Rolebinding  objects,
-	this command can then be used to delete the respective CSR, RB and Role resources for specific request`,
+	Because for every run we are going to create respective CSR, Role and RoleBinding objects,
+	this command can then be used to delete the respective CSR, RoleBinding and Role resources for specific request`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		s, err := store.NewFileStore()
 		if err != nil {
@@ -216,7 +216,7 @@ func validateArguments(o *utils.AllowOptions) error {
 	}
 
 	if o.ValidFor*60 < 600 {
-		return errors.New("Duration (--from) can not be less than 10 minutes")
+		return errors.New("Duration (--for) can not be less than 10 minutes")
 	}
 
 	return nil
