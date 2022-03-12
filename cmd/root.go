@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -25,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	cmdcreate "k8s.io/kubectl/pkg/cmd/create"
@@ -56,7 +58,7 @@ func Execute() {
 }
 
 var (
-	options       = &utils.AllowOptions{}
+	options       = &allow.AllowOptions{}
 	res           = []string{}
 	delIdentifier string
 	// VERSION will be overridden by ldflags when we build the project using goreleaser
@@ -70,8 +72,9 @@ func init() {
 	allowCmd.Flags().StringSliceVarP(&options.Verbs, "verb", "v", []string{}, "Allowed verbs")
 	allowCmd.Flags().StringVarP(&options.KubeConfigPath, "kubeconfig", "k", "", "Path to kubeconfig file")
 	allowCmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "default", "Namespace of the resource")
-	allowCmd.Flags().StringSliceVarP(&options.ResourceNames, "resource-name", "", []string{}, "Resource names to allow access on")
+	allowCmd.Flags().StringSliceVarP(&options.ResourceNames, "resource-name", "", []string{}, "Resource names to allow access on, they are not validated to be present on the cluster")
 	allowCmd.Flags().Int32VarP(&options.ValidFor, "for", "f", 86400, "Duration the access will be allowed for (in minutes), for example --for 10. Defaults to 1 day")
+	allowCmd.Flags().StringArrayVarP(&options.Labels, "labels", "l", []string{}, "Labels of the resources the specified access should be allowed on. For example, if you want to allow access to see logs of a set of pods that have same labels, instead of specifying all those pods separately using --resource-name field we can just specify label that is common among those resources")
 	// required flags for allow command
 	allowCmd.MarkFlagRequired("resource")
 	allowCmd.MarkFlagRequired("verb")
@@ -93,9 +96,22 @@ var allowCmd = &cobra.Command{
 	Use:   "allow",
 	Short: "Allow the access to the resources",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// initialise clients
+		config, _, err := utils.Config(options.KubeConfigPath)
+		if err != nil {
+			return errors.Wrap(err, "Creating rest.config object")
+		}
+		// clients has k8s typed as well as dynamic client
+		clients, err := kube.NewClient(config)
+		if err != nil {
+			return errors.Wrap(err, "Initialising KubeClient")
+		}
+		options.Clients = *clients
+
+		// de duplicate the values in the flags
 		deDuplicateValues(cmd, options)
 
-		err := validateArguments(options)
+		err = validateArguments(options)
 		if err != nil {
 			return err
 		}
@@ -162,7 +178,7 @@ var deleteCmd = &cobra.Command{
 	},
 }
 
-func validateArguments(o *utils.AllowOptions) error {
+func validateArguments(o *allow.AllowOptions) error {
 	if len(o.Verbs) == 0 {
 		return fmt.Errorf("atleast one verb must be specified")
 	}
@@ -215,6 +231,29 @@ func validateArguments(o *utils.AllowOptions) error {
 
 	}
 
+	if len(o.Labels) != 0 {
+		// In the cases where we specified more than one resource for example pods,services
+		// and a label key=value. And let's say we got m pod resources with that label and n service
+		// resources, specifying that in the role object is going to be challenge.
+		// We will have to either create two role objects or create a complicated role object.
+		// To simplify the things, we are making sure if we are specifying labels we are just providing
+		// one resource
+		// BUT if we are specifying log or any other subresource in that case we will have to specify
+		// more than once reosource but technially its just one resource for ex pods,pods/log
+		// so the condition, becomes if its not subresource and resources are more than one
+		if len(o.Resources) > 1 && !o.SubResourcePresent {
+			return errors.New("You must specify only one resource (--resource) if you want to use --labels flag")
+		}
+
+		// get resource names from labels append that into `--resource-name`
+		resFromLabels, err := resourcesFromLabels(o)
+		if err != nil {
+			return err
+		}
+
+		o.ResourceNames = append(o.ResourceNames, resFromLabels...)
+	}
+
 	if o.ValidFor*60 < 600 {
 		return errors.New("Duration (--for) can not be less than 10 minutes")
 	}
@@ -222,7 +261,28 @@ func validateArguments(o *utils.AllowOptions) error {
 	return nil
 }
 
-func deDuplicateValues(cmd *cobra.Command, o *utils.AllowOptions) {
+func resourcesFromLabels(o *allow.AllowOptions) ([]string, error) {
+	resNames := []string{}
+	groupVersionResource, err := o.Mapper.ResourceFor(schema.GroupVersionResource{Resource: o.Resources[0].Resource, Group: o.Resources[0].Group})
+	r := o.Clients.DynClient.Resource(
+		groupVersionResource,
+	)
+
+	u, err := r.List(context.Background(), metav1.ListOptions{
+		LabelSelector: strings.Join(o.Labels, ","),
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "Listing resource name using GVR")
+	}
+
+	for _, obj := range u.Items {
+		resNames = append(resNames, obj.GetName())
+	}
+
+	return resNames, nil
+}
+
+func deDuplicateValues(cmd *cobra.Command, o *allow.AllowOptions) {
 	// verbs
 	verbs := []string{}
 	for _, v := range o.Verbs {
@@ -243,6 +303,7 @@ func deDuplicateValues(cmd *cobra.Command, o *utils.AllowOptions) {
 
 		resource := &cmdcreate.ResourceOptions{}
 		if len(sections) == 2 {
+			o.SubResourcePresent = true
 			resource.SubResource = sections[1]
 		}
 

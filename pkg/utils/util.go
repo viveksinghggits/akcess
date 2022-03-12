@@ -23,13 +23,12 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	cmdcreate "k8s.io/kubectl/pkg/cmd/create"
 )
 
 // Cluster holds the cluster data
@@ -134,19 +133,6 @@ var (
 	}
 )
 
-type AllowOptions struct {
-	Resources     []cmdcreate.ResourceOptions
-	Verbs         []string
-	ResourceNames []string
-
-	Namespace      string
-	KubeConfigPath string
-
-	ValidFor int32
-
-	Mapper meta.RESTMapper
-}
-
 const (
 	Name                  = "akcess"
 	ResourceAnnotationKey = "allow.akcess.id"
@@ -191,6 +177,10 @@ func Config(kubeConfigPath string) (*rest.Config, *clientcmdapi.Config, error) {
 
 func KubeClient(config *rest.Config) (kubernetes.Interface, error) {
 	return kubernetes.NewForConfig(config)
+}
+
+func DynClient(config *rest.Config) (dynamic.Interface, error) {
+	return dynamic.NewForConfig(config)
 }
 
 func ArrayContains(s []string, e string) bool {

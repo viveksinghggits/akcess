@@ -24,14 +24,11 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/certificates/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/rand"
-	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	cmdcreate "k8s.io/kubectl/pkg/cmd/create"
 
 	"github.com/viveksinghggits/akcess/pkg/store"
 	"github.com/viveksinghggits/akcess/pkg/utils"
@@ -39,6 +36,7 @@ import (
 
 type Client struct {
 	KubeClient kubernetes.Interface
+	DynClient  dynamic.Interface
 }
 
 func NewClient(config *rest.Config) (*Client, error) {
@@ -47,8 +45,14 @@ func NewClient(config *rest.Config) (*Client, error) {
 		return nil, errors.Wrap(err, "Creating kubernetes client")
 	}
 
+	dyn, err := utils.DynClient(config)
+	if err != nil {
+		return nil, errors.Wrap(err, "Creating dynamic client")
+	}
+
 	return &Client{
 		KubeClient: client,
+		DynClient:  dyn,
 	}, nil
 }
 
@@ -63,28 +67,6 @@ func (c *Client) CreateRole(r *rbacv1.Role) (*rbacv1.Role, error) {
 
 func (c *Client) CreateRoleBinding(rb *rbacv1.RoleBinding) (*rbacv1.RoleBinding, error) {
 	return c.KubeClient.RbacV1().RoleBindings(rb.Namespace).Create(context.Background(), rb, metav1.CreateOptions{})
-}
-
-func RoleObject(o *utils.AllowOptions, id uuid.UUID) (*rbacv1.Role, error) {
-	role := &rbacv1.Role{
-		// this is ok because we know exactly how we want to be serialized
-		TypeMeta: metav1.TypeMeta{APIVersion: rbacv1.SchemeGroupVersion.String(), Kind: "Role"},
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", utils.Name),
-			Namespace:    o.Namespace,
-			Annotations: map[string]string{
-				utils.ResourceAnnotationKey: id.String(),
-			},
-		},
-	}
-
-	rules, err := generateResourcePolicyRules(o.Mapper, o.Verbs, o.Resources, o.ResourceNames, []string{})
-	if err != nil {
-		return nil, err
-	}
-	role.Rules = rules
-
-	return role, nil
 }
 
 func CSRObject(csr []byte, duration int32, id uuid.UUID) *v1.CertificateSigningRequest {
@@ -107,52 +89,6 @@ func CSRObject(csr []byte, duration int32, id uuid.UUID) *v1.CertificateSigningR
 		},
 	}
 	return csrObject
-}
-
-func generateResourcePolicyRules(mapper meta.RESTMapper, verbs []string, resources []cmdcreate.ResourceOptions, resourceNames []string, nonResourceURLs []string) ([]rbacv1.PolicyRule, error) {
-	// groupResourceMapping is a apigroup-resource map. The key of this map is api group, while the value
-	// is a string array of resources under this api group.
-	// E.g.  groupResourceMapping = {"extensions": ["replicasets", "deployments"], "batch":["jobs"]}
-	groupResourceMapping := map[string][]string{}
-
-	// This loop does the following work:
-	// 1. Constructs groupResourceMapping based on input resources.
-	// 2. Prevents pointing to non-existent resources.
-	// 3. Transfers resource short name to long name. E.g. rs.extensions is transferred to replicasets.extensions
-	for _, r := range resources {
-		resource := schema.GroupVersionResource{Resource: r.Resource, Group: r.Group}
-		groupVersionResource, err := mapper.ResourceFor(schema.GroupVersionResource{Resource: r.Resource, Group: r.Group})
-		if err == nil {
-			resource = groupVersionResource
-		}
-
-		if len(r.SubResource) > 0 {
-			resource.Resource = resource.Resource + "/" + r.SubResource
-		}
-		if !utils.ArrayContains(groupResourceMapping[resource.Group], resource.Resource) {
-			groupResourceMapping[resource.Group] = append(groupResourceMapping[resource.Group], resource.Resource)
-		}
-	}
-
-	// Create separate rule for each of the api group.
-	rules := []rbacv1.PolicyRule{}
-	for _, g := range sets.StringKeySet(groupResourceMapping).List() {
-		rule := rbacv1.PolicyRule{}
-		rule.Verbs = verbs
-		rule.Resources = groupResourceMapping[g]
-		rule.APIGroups = []string{g}
-		rule.ResourceNames = resourceNames
-		rules = append(rules, rule)
-	}
-
-	if len(nonResourceURLs) > 0 {
-		rule := rbacv1.PolicyRule{}
-		rule.Verbs = verbs
-		rule.NonResourceURLs = nonResourceURLs
-		rules = append(rules, rule)
-	}
-
-	return rules, nil
 }
 
 func RoleBindingObject(roleName, userName, ns string, id uuid.UUID) *rbacv1.RoleBinding {
