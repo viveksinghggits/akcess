@@ -97,17 +97,37 @@ mv akcess /usr/local/bin
 ```
 » akcess allow --verb list --resource pods
 ```
+
 - Allow access to see logs of pod with name `nginx` in `test` namespace
 
 ```
 # log is sub resource for pod resource
-» akcess allow --verb get,list --resource pods,pods/log -n test --resource-name nginx
+» akcess allow --verb get --resource pods,pods/log -n test --resource-name nginx
+```
+
+- Allow access to `exec` into pods of namespace `database`
+
+```
+» akcess allow  --verb get,create --resource pods,pods/exec -n database
+```
+
+- Allow access to see logs of pods that have label `component=database` set in namespace `backend`
+
+```
+# more than one labels can be comma separated
+» akcess allow  --verb get --resource pods,pods/log -l component=database -n backend
+```
+
+- Allow access to get the services that have label `component=database` set in namespace `backend`
+
+```
+» akcess allow  --verb get --resource services -l component=database -n backend
 ```
 
 You can also redirect the output of the above commands to a file, that can be set at `KUBECONFIG` env var.
 
 ```
-» akcess allow --verb get,list --resource pods,pods/log -n test > logsconfig
+» akcess allow --verb get --resource pods,pods/log -n test > logsconfig
 » export KUBECONFIG=logsconfig
 ```
 
