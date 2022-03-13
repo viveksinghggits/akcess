@@ -146,16 +146,25 @@ func Base64EncodeCSR(c []byte) []byte {
 
 // Config gets us rest.Config considering the kubeconfig flag provided as kubeConfigPath
 // if not, falls back to default kubeconfig location
-func Config(kubeConfigPath string) (*rest.Config, *clientcmdapi.Config, error) {
+func Config(kubeConfigFlag string) (*rest.Config, *clientcmdapi.Config, error) {
 	kubeConfig := ""
-	if kubeConfigPath == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "Getting user home directory")
+	if kubeConfigFlag == "" {
+		// kubeconfig was not provided using -k flag
+		// check if KUBECONFIG env var is set
+		// otherwise fallback to default kubeconfig location
+		kubeEnvVar := os.Getenv(clientcmd.RecommendedConfigPathEnvVar)
+		if kubeEnvVar != "" {
+			kubeConfig = kubeEnvVar
+
+		} else {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "Getting user home directory")
+			}
+			kubeConfig = filepath.Join(home, clientcmd.RecommendedHomeDir, clientcmd.RecommendedFileName)
 		}
-		kubeConfig = filepath.Join(home, ".kube", "config")
 	} else {
-		kubeConfig = kubeConfigPath
+		kubeConfig = kubeConfigFlag
 	}
 
 	var config *rest.Config
