@@ -149,7 +149,10 @@ func Base64EncodeCSR(c []byte) []byte {
 func Config(kubeConfigPath string) (*rest.Config, *clientcmdapi.Config, error) {
 	kubeConfig := ""
 	if kubeConfigPath == "" {
-		home, _ := os.UserHomeDir()
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "Getting user home directory")
+		}
 		kubeConfig = filepath.Join(home, ".kube", "config")
 	} else {
 		kubeConfig = kubeConfigPath
