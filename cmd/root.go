@@ -58,9 +58,10 @@ func Execute() {
 }
 
 var (
-	options       = &allow.AllowOptions{}
-	res           = []string{}
-	delIdentifier string
+	options           = &allow.AllowOptions{}
+	res               = []string{}
+	delIdentifier     string
+	kubeConfigPathDel string
 	// VERSION will be overridden by ldflags when we build the project using goreleaser
 	VERSION = "DEV"
 )
@@ -80,6 +81,7 @@ func init() {
 	allowCmd.MarkFlagRequired("verb")
 
 	deleteCmd.Flags().StringVarP(&delIdentifier, "id", "i", "", "Id for which the k8s resources should be deleted. Can be figured out from list command")
+	deleteCmd.Flags().StringVarP(&kubeConfigPathDel, "kubeconfig", "k", "", "Path to kubeconfig file")
 	// required flags for delete command
 	deleteCmd.MarkFlagRequired("id")
 }
@@ -120,12 +122,13 @@ var allowCmd = &cobra.Command{
 		conf := store.NewAkcessConfig(id.String(), options.Namespace)
 
 		// init store
-		// run this in a go routine
 		s, err := store.NewFileStore()
 		if err != nil {
 			return errors.Wrap(err, "initialising filestore")
 		}
 
+		// should we do this after things are done
+		// run this in a go routine
 		if err := s.Write(conf); err != nil {
 			return fmt.Errorf("writing config to the filestore, %s\n", err.Error())
 		}
@@ -174,7 +177,7 @@ var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete the kubernetes resources that were made specific allow command",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return kube.DeleteResources(delIdentifier)
+		return kube.DeleteResources(delIdentifier, kubeConfigPathDel)
 	},
 }
 

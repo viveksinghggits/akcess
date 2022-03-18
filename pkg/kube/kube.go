@@ -118,11 +118,11 @@ func (c *Client) ValidateNamespace(ns string) error {
 	return err
 }
 
-func DeleteResources(id string) error {
+func DeleteResources(id, kubeConfigFlag string) error {
 	// accept context from parent
 	ctx := context.Background()
 	// create kubernetes client
-	config, _, err := utils.Config("")
+	config, _, err := utils.Config(kubeConfigFlag)
 	if err != nil {
 		return errors.Wrap(err, "Creating rest.config object")
 	}
