@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -49,27 +48,27 @@ type AllowOptions struct {
 	Clients            kube.Client
 }
 
-func Access(o *AllowOptions, id uuid.UUID) error {
+func Access(o *AllowOptions, id uuid.UUID) ([]byte, error) {
 	commonName := fmt.Sprintf("%s-%s", utils.Name, apirand.String(5))
 
 	key, err := privateKey()
 	if err != nil {
-		return errors.Wrap(err, "Getting private key")
+		return nil, errors.Wrap(err, "Getting private key")
 	}
 
 	csr, err := csrForPrivateKey(key, commonName)
 	if err != nil {
-		return errors.Wrap(err, "Generating CSR for private key")
+		return nil, errors.Wrap(err, "Generating CSR for private key")
 	}
 
 	_, clientconfig, err := utils.Config(o.KubeConfigPath)
 	if err != nil {
-		return errors.Wrap(err, "Creating rest.config object")
+		return nil, errors.Wrap(err, "Creating rest.config object")
 	}
 
 	// validate if namespace is available
 	if err := o.Clients.ValidateNamespace(o.Namespace); err != nil {
-		return errors.Wrapf(err, "namespace %s was not found", o.Namespace)
+		return nil, errors.Wrapf(err, "namespace %s was not found", o.Namespace)
 	}
 
 	// csr object from csr bytes
@@ -78,7 +77,7 @@ func Access(o *AllowOptions, id uuid.UUID) error {
 	// create CSR Kubernetes object
 	c, err := o.Clients.CreateCSR(csrObject)
 	if err != nil {
-		return errors.Wrap(err, "Creating CSR kubernetes object")
+		return nil, errors.Wrap(err, "Creating CSR kubernetes object")
 	}
 
 	// approve CSR
@@ -94,7 +93,7 @@ func Access(o *AllowOptions, id uuid.UUID) error {
 	ctx := context.Background()
 	_, err = o.Clients.KubeClient.CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, c.Name, csrObject, metav1.UpdateOptions{})
 	if err != nil {
-		return errors.Wrap(err, "Approving CertificateSigningRequest")
+		return nil, errors.Wrap(err, "Approving CertificateSigningRequest")
 	}
 
 	// wait for certificate field to be generated in CSR's status.certificate field
@@ -108,31 +107,31 @@ func Access(o *AllowOptions, id uuid.UUID) error {
 	})
 
 	if err != nil {
-		return errors.Wrap(err, "waiting for CSR certificate to be generated")
+		return nil, errors.Wrap(err, "waiting for CSR certificate to be generated")
 	}
 
 	// create role and rolebinding
 	r, err := RoleObject(o, id)
 	if err != nil {
-		return errors.Wrap(err, "error getting role object")
+		return nil, errors.Wrap(err, "error getting role object")
 	}
 
 	roleObj, err := o.Clients.CreateRole(r)
 	if err != nil {
-		return errors.Wrap(err, "creating role object")
+		return nil, errors.Wrap(err, "creating role object")
 	}
 
 	// role binding
 	rb := kube.RoleBindingObject(roleObj.Name, commonName, o.Namespace, id)
 	_, err = o.Clients.CreateRoleBinding(rb)
 	if err != nil {
-		return errors.Wrap(err, "Creating rolebinding object")
+		return nil, errors.Wrap(err, "Creating rolebinding object")
 	}
 
 	// get csr again, so that we can get the certificate from status
 	csrOp, err := o.Clients.KubeClient.CertificatesV1().CertificateSigningRequests().Get(ctx, c.Name, metav1.GetOptions{})
 	if err != nil {
-		return errors.Wrap(err, "Getting CSR to fetch status.Certificate")
+		return nil, errors.Wrap(err, "Getting CSR to fetch status.Certificate")
 	}
 
 	// Generate KubeConfig file
@@ -166,10 +165,10 @@ func csrForPrivateKey(key *rsa.PrivateKey, commonName string) ([]byte, error) {
 	return csr, nil
 }
 
-func outputKubeConfig(config *clientcmdapi.Config, key *rsa.PrivateKey, cert []byte, username string) error {
+func outputKubeConfig(config *clientcmdapi.Config, key *rsa.PrivateKey, cert []byte, username string) ([]byte, error) {
 	name, cluster, err := clusterDetails(config)
 	if err != nil {
-		return errors.Wrap(err, "getting cluster details")
+		return nil, errors.Wrap(err, "getting cluster details")
 	}
 
 	c := utils.KubeConfig{
@@ -207,10 +206,10 @@ func outputKubeConfig(config *clientcmdapi.Config, key *rsa.PrivateKey, cert []b
 
 	out, err := yaml.Marshal(c)
 	if err != nil {
-		return errors.Wrap(err, "converting generated config to yaml")
+		return nil, errors.Wrap(err, "converting generated config to yaml")
 	}
-	fmt.Fprint(os.Stdout, string(out))
-	return nil
+
+	return out, nil
 }
 
 func clusterDetails(c *clientcmdapi.Config) (string, *clientcmdapi.Cluster, error) {
