@@ -1,0 +1,34 @@
+name: Go
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Download kind
+      run: go get sigs.k8s.io/kind && go install sigs.k8s.io/kind
+
+    - name: Start Kind
+      run: kind create cluster
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: E2E Test
+      run: go test -v ./... -check.vv
+
+    - name: Delete Kind Cluster
+      run: kind delete cluster

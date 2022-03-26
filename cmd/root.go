@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -111,7 +112,10 @@ var allowCmd = &cobra.Command{
 		options.Clients = *clients
 
 		// de duplicate the values in the flags
-		deDuplicateValues(cmd, options)
+		err = deDuplicateValues(cmd, options)
+		if err != nil {
+			return errors.Wrap(err, "Deduplicating options and creating resource options from resources")
+		}
 
 		err = validateArguments(options)
 		if err != nil {
@@ -137,7 +141,13 @@ var allowCmd = &cobra.Command{
 			return errors.Wrap(err, "closing the filestore")
 		}
 
-		return allow.Access(options, id)
+		kubeConfig, err := allow.Access(options, id)
+		if err != nil {
+			return err
+		}
+
+		_, err = fmt.Fprint(os.Stdout, string(kubeConfig))
+		return err
 	},
 }
 
@@ -285,7 +295,7 @@ func resourcesFromLabels(o *allow.AllowOptions) ([]string, error) {
 	return resNames, nil
 }
 
-func deDuplicateValues(cmd *cobra.Command, o *allow.AllowOptions) {
+func deDuplicateValues(cmd *cobra.Command, o *allow.AllowOptions) error {
 	// verbs
 	verbs := []string{}
 	for _, v := range o.Verbs {
@@ -301,12 +311,48 @@ func deDuplicateValues(cmd *cobra.Command, o *allow.AllowOptions) {
 	o.Verbs = verbs
 
 	// resources
-	for _, r := range res {
+	o.Resources, o.SubResourcePresent = ResourceOptionsFromResources(res)
+
+	// Remove duplicate resource names.
+	resourceNames := []string{}
+	for _, n := range o.ResourceNames {
+		if !utils.ArrayContains(resourceNames, n) {
+			resourceNames = append(resourceNames, n)
+		}
+	}
+	o.ResourceNames = resourceNames
+	var err error
+	o.Mapper, err = InitMapper()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func InitMapper() (meta.RESTMapper, error) {
+	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
+	matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
+
+	m, err := cmdutil.NewFactory(matchVersionKubeConfigFlags).ToRESTMapper()
+	if err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
+// ResourceOptionsFromResources gets us cmdcreate.ResourceOptions for resources that have been specified
+// as --resource flag to `allow akcess`
+// it also returns second value that specified if there are sub resources present in the passed resources
+func ResourceOptionsFromResources(resources []string) ([]cmdcreate.ResourceOptions, bool) {
+	options := []cmdcreate.ResourceOptions{}
+	var subResourcePresent bool
+	for _, r := range resources {
 		sections := strings.SplitN(r, "/", 2)
 
 		resource := &cmdcreate.ResourceOptions{}
 		if len(sections) == 2 {
-			o.SubResourcePresent = true
+			subResourcePresent = true
 			resource.SubResource = sections[1]
 		}
 
@@ -317,30 +363,11 @@ func deDuplicateValues(cmd *cobra.Command, o *allow.AllowOptions) {
 		resource.Resource = parts[0]
 
 		if resource.Resource == "*" && len(parts) == 1 && len(sections) == 1 {
-			o.Resources = []cmdcreate.ResourceOptions{*resource}
+			options = []cmdcreate.ResourceOptions{*resource}
 			break
 		}
 
-		o.Resources = append(o.Resources, *resource)
+		options = append(options, *resource)
 	}
-
-	// Remove duplicate resource names.
-	resourceNames := []string{}
-	for _, n := range o.ResourceNames {
-		if !utils.ArrayContains(resourceNames, n) {
-			resourceNames = append(resourceNames, n)
-		}
-	}
-	o.ResourceNames = resourceNames
-
-	// init mapper
-	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag()
-	matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
-
-	m, err := cmdutil.NewFactory(matchVersionKubeConfigFlags).ToRESTMapper()
-	if err != nil {
-		fmt.Printf("error %s\n", err.Error())
-	}
-
-	o.Mapper = m
+	return options, subResourcePresent
 }

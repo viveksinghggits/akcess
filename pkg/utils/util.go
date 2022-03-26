@@ -144,8 +144,10 @@ func Base64EncodeCSR(c []byte) []byte {
 	return ret
 }
 
-// Config gets us rest.Config considering the kubeconfig flag provided as kubeConfigPath
-// if not, falls back to default kubeconfig location
+// Config gets us rest.Config considering the kubeconfig flag provided as kubeConfigFlag
+// if not, falls back
+// 1. KUBECONFIG env var
+// 2. default kubeconfig file location
 func Config(kubeConfigFlag string) (*rest.Config, *clientcmdapi.Config, error) {
 	kubeConfig := ""
 	if kubeConfigFlag == "" {
