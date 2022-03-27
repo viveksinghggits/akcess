@@ -1,5 +1,7 @@
 ## Akcess
 
+[![Go](https://github.com/viveksinghggits/akcess/actions/workflows/actions.yaml/badge.svg?branch=master)](https://github.com/viveksinghggits/akcess/actions/workflows/actions.yaml)
+
 `akcess` is a command-line utility that can be used to share very fine-grained access to your Kubernetes
 cluster with other teams.
 
