@@ -100,6 +100,12 @@ mv akcess /usr/local/bin
 » akcess allow --verb list --resource pods
 ```
 
+- Allow access to get pods from `default` namespace and username `test`
+
+```
+» akcess allow --verb list --resource pods --username test
+```
+
 - Allow access to see logs of pod with name `nginx` in `test` namespace
 
 ```
