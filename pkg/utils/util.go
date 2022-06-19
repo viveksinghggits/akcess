@@ -24,6 +24,7 @@ import (
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	apirand "k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -214,4 +215,11 @@ func FilePath() (string, string) {
 		fileRoot = os.TempDir()
 	}
 	return fmt.Sprintf("%s/.%s/config", fileRoot, Name), fileRoot
+}
+
+func Username(u string) string {
+	if u == "" {
+		return fmt.Sprintf("%s-%s", Name, apirand.String(5))
+	}
+	return u
 }
