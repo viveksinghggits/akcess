@@ -1,19 +1,3 @@
-/*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package cmd
 
 import (
@@ -72,6 +56,8 @@ func init() {
 	deleteCmd.Flags().StringVarP(&delIdentifier, "id", "i", "", "Id for which the k8s resources should be deleted. Can be figured out from list command")
 	deleteCmd.Flags().StringVarP(&kubeConfigPathDel, "kubeconfig", "k", "", "Path to kubeconfig file")
 	// required flags for delete command
+	// `akcess delete -id` is a valid command and takes `d` as value of -i flag
+	// `akcess delete -id abc` is also valid and value of  -i flag is d and abc id discarded
 	deleteCmd.MarkFlagRequired("id")
 }
 
