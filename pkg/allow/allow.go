@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	apirand "k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -46,17 +45,18 @@ type AllowOptions struct {
 	SubResourcePresent bool
 	Mapper             meta.RESTMapper
 	Clients            kube.Client
+	Username           string
 }
 
 func Access(o *AllowOptions, id uuid.UUID) ([]byte, error) {
-	commonName := fmt.Sprintf("%s-%s", utils.Name, apirand.String(5))
+	username := utils.Username(o.Username)
 
 	key, err := privateKey()
 	if err != nil {
 		return nil, errors.Wrap(err, "Getting private key")
 	}
 
-	csr, err := csrForPrivateKey(key, commonName)
+	csr, err := csrForPrivateKey(key, username)
 	if err != nil {
 		return nil, errors.Wrap(err, "Generating CSR for private key")
 	}
@@ -122,7 +122,7 @@ func Access(o *AllowOptions, id uuid.UUID) ([]byte, error) {
 	}
 
 	// role binding
-	rb := kube.RoleBindingObject(roleObj.Name, commonName, o.Namespace, id)
+	rb := kube.RoleBindingObject(roleObj.Name, username, o.Namespace, id)
 	_, err = o.Clients.CreateRoleBinding(rb)
 	if err != nil {
 		return nil, errors.Wrap(err, "Creating rolebinding object")
@@ -135,7 +135,7 @@ func Access(o *AllowOptions, id uuid.UUID) ([]byte, error) {
 	}
 
 	// Generate KubeConfig file
-	return outputKubeConfig(clientconfig, key, csrOp.Status.Certificate, commonName)
+	return outputKubeConfig(clientconfig, key, csrOp.Status.Certificate, username)
 }
 
 func privateKey() (*rsa.PrivateKey, error) {

@@ -77,6 +77,7 @@ func init() {
 	allowCmd.Flags().StringSliceVarP(&options.ResourceNames, "resource-name", "", []string{}, "Resource names to allow access on, they are not validated to be present on the cluster")
 	allowCmd.Flags().Int32VarP(&options.ValidFor, "for", "f", 86400, "Duration the access will be allowed for (in minutes), for example --for 10. Defaults to 1 day")
 	allowCmd.Flags().StringArrayVarP(&options.Labels, "labels", "l", []string{}, "Labels of the resources the specified access should be allowed on. For example, if you want to allow access to see logs of a set of pods that have same labels, instead of specifying all those pods separately using --resource-name field we can just specify label that is common among those resources")
+	allowCmd.Flags().StringVarP(&options.Username, "username", "u", "", "Username to be used in KubeConfig file")
 	// required flags for allow command
 	allowCmd.MarkFlagRequired("resource")
 	allowCmd.MarkFlagRequired("verb")
