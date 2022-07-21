@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/viveksinghggits/akcess/pkg/kube"
@@ -15,7 +13,6 @@ var deleteCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		allFlag, _ := cmd.Flags().GetBool("all")
 		if allFlag {
-			log.Println("all flag is provided")
 			s, err := store.NewFileStore()
 			if err != nil {
 				return errors.Wrap(err, "Creating store instance")
@@ -24,7 +21,6 @@ var deleteCmd = &cobra.Command{
 			if err != nil {
 				return errors.Wrap(err, "Calling list from store")
 			}
-			log.Println(kubeConfigPathDel)
 			for _, c := range list {
 				kube.DeleteResources(c.Id, kubeConfigPathDel)
 			}
