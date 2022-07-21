@@ -34,6 +34,7 @@ var (
 	res               = []string{}
 	delIdentifier     string
 	kubeConfigPathDel string
+	delAll            bool
 	// VERSION will be overridden by ldflags when we build the project using goreleaser
 	VERSION = "DEV"
 )
@@ -55,10 +56,12 @@ func init() {
 
 	deleteCmd.Flags().StringVarP(&delIdentifier, "id", "i", "", "Id for which the k8s resources should be deleted. Can be figured out from list command")
 	deleteCmd.Flags().StringVarP(&kubeConfigPathDel, "kubeconfig", "k", "", "Path to kubeconfig file")
+	deleteCmd.Flags().BoolVarP(&delAll, "all", "a", false, "flag to delete all resource")
 	// required flags for delete command
 	// `akcess delete -id` is a valid command and takes `d` as value of -i flag
 	// `akcess delete -id abc` is also valid and value of  -i flag is d and abc id discarded
-	deleteCmd.MarkFlagRequired("id")
+	// Removing id as required so that delete all flag can work.
+	//deleteCmd.MarkFlagRequired("id")
 }
 
 var versionCmd = &cobra.Command{
