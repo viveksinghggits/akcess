@@ -163,4 +163,3 @@ To delete `Kubernetes` resources for a specific run we can run
 ```
 » akcess delete --id ee022ab3-246f-4a6d-bd53-e04ae90cc1d9
 ```
-
